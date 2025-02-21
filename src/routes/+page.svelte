@@ -1,12 +1,25 @@
 <script lang="ts">
   import { Client, Storage, ID, Account } from "appwrite";
+  import type { Models } from "appwrite";
   import { onMount } from "svelte";
+  import { PROJECT_ID } from "../lib/constants";
 
   const client = new Client()
     .setEndpoint("https://cloud.appwrite.io/v1")
-    .setProject("67b777e00031574783b9");
+    .setProject(PROJECT_ID);
 
   const storage = new Storage(client);
+
+  let files: Models.File[] = [];
+
+  onMount(async () => {
+    try {
+      const result = await storage.listFiles("main");
+      files = result.files;
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
   function submit(event: Event) {
     event.preventDefault();
@@ -25,18 +38,27 @@
       },
     );
   }
+
+  function getFileUrl(fileId: string) {
+    return `https://cloud.appwrite.io/v1/storage/buckets/main/files/${fileId}/view?project=${PROJECT_ID}`;
+  }
 </script>
 
 <input type="file" id="uploader" />
 <input type="submit" value="Upload" onclick={submit} />
-<img
-  alt="shuflduf gaming"
-  src="https://cloud.appwrite.io/v1/storage/buckets/main/files/67b82aee000cc5c01a48/view?project=67b777e00031574783b9"
-/>
-<video
-  controls
-  src="https://cloud.appwrite.io/v1/storage/buckets/main/files/67b82cc7003584a62ce9/view?project=67b777e00031574783b9"
-  crossorigin="anonymous"
->
-  <track kind="captions" src="" label="English" />
-</video>
+
+<ul>
+  {#each files as file}
+    <li>
+      {#if file.mimeType.startsWith("image/")}
+        <img src={getFileUrl(file.$id)} alt={file.name} />
+      {:else if file.mimeType.startsWith("video/")}
+        <video controls src={getFileUrl(file.$id)} crossorigin="anonymous">
+          <track kind="captions" src="" label="English" />
+        </video>
+      {:else}
+        <a href={getFileUrl(file.$id)} target="_blank">{file.name}</a>
+      {/if}
+    </li>
+  {/each}
+</ul>
