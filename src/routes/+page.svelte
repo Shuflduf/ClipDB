@@ -65,9 +65,9 @@
     {/if}
   </div>
 
-  <ul class="space-y-4">
+  <div class="video-grid">
     {#each files as file}
-      <li class="border p-4 rounded shadow">
+      <div class="border p-4 rounded shadow">
         {#if file.mimeType.startsWith("image/")}
           <img
             src={getFileUrl(file.$id)}
@@ -79,7 +79,7 @@
             controls
             src={getFileUrl(file.$id)}
             crossorigin="anonymous"
-            class="max-w-full h-auto"
+            class="w-full h-auto"
           >
             <track kind="captions" src="" label="English" />
           </video>
@@ -91,7 +91,15 @@
           >
         {/if}
         <p class="text-gray-500 text-sm mt-2">{file.name}</p>
-      </li>
+      </div>
     {/each}
-  </ul>
+  </div>
 </div>
+
+<style>
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+</style>
