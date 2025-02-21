@@ -6,29 +6,10 @@
     .setEndpoint("https://cloud.appwrite.io/v1")
     .setProject("67b777e00031574783b9");
 
-  const account = new Account(client);
-  let isAuthenticated = false;
-
-  onMount(() => {
-    account.createEmailPasswordSession("shuflduf@gmail.com", "password").then(
-      function (response) {
-        isAuthenticated = true;
-        console.log("Login successful");
-      },
-      function (error) {
-        console.log("Login failed");
-      },
-    );
-  });
-
   const storage = new Storage(client);
 
   function submit(event: Event) {
     event.preventDefault();
-    if (!isAuthenticated) {
-      console.log("User is not authenticated");
-      return;
-    }
 
     const fileInput = document.getElementById("uploader") as HTMLInputElement;
     const file = fileInput?.files?.[0] ?? new File([], "empty");
@@ -37,19 +18,25 @@
 
     promise.then(
       function (response) {
-        console.log(response); // Success
+        console.log(response);
       },
       function (error) {
-        console.log(error); // Failure
+        console.log(error);
       },
     );
   }
 </script>
 
-<h1>Welcome to SvelteKit</h1>
-<p>
-  Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the
-  documentation
-</p>
 <input type="file" id="uploader" />
 <input type="submit" value="Upload" onclick={submit} />
+<img
+  alt="shuflduf gaming"
+  src="https://cloud.appwrite.io/v1/storage/buckets/main/files/67b82aee000cc5c01a48/view?project=67b777e00031574783b9"
+/>
+<video
+  controls
+  src="https://cloud.appwrite.io/v1/storage/buckets/main/files/67b82cc7003584a62ce9/view?project=67b777e00031574783b9"
+  crossorigin="anonymous"
+>
+  <track kind="captions" src="" label="English" />
+</video>
