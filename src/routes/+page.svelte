@@ -67,7 +67,7 @@
 
   <div class="video-grid">
     {#each files as file}
-      <div class="border p-4 rounded shadow">
+      <div class="border p-4 rounded shadow-md">
         {#if file.mimeType.startsWith("image/")}
           <img
             src={getFileUrl(file.$id)}
