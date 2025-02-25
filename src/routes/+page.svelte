@@ -141,29 +141,15 @@
 
   <div class="video-grid">
     {#each files as file}
-      <div class="border p-4 rounded shadow-md">
-        {#if file.mimeType.startsWith("image/")}
-          <img
-            src={getFileUrl(file.$id)}
-            alt={file.name}
-            class="max-w-full h-auto"
-          />
-        {:else if file.mimeType.startsWith("video/")}
-          <video
-            controls
-            src={getFileUrl(file.$id)}
-            crossorigin="anonymous"
-            class="w-full h-auto"
-          >
-            <track kind="captions" src="" label="English" />
-          </video>
-        {:else}
-          <a
-            href={getFileUrl(file.$id)}
-            target="_blank"
-            class="text-blue-500 hover:underline">{file.name}</a
-          >
-        {/if}
+      <div class="border p-4 rounded shadow-md hover:shadow-lg transition">
+        <video
+          controls
+          src={getFileUrl(file.$id)}
+          crossorigin="anonymous"
+          class="w-full h-auto"
+        >
+          <track kind="captions" src="" label="English" />
+        </video>
         <p class="text-gray-500 text-sm mt-2">{file.name}</p>
       </div>
     {/each}
