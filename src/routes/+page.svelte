@@ -1,26 +1,22 @@
 <script lang="ts">
-  import { Client, Storage, ID, Databases } from "appwrite";
   import type { Models } from "appwrite";
   import { onMount } from "svelte";
-  import { PROJECT_ID } from "../lib/constants";
-
-  const client = new Client()
-    .setEndpoint("https://cloud.appwrite.io/v1")
-    .setProject(PROJECT_ID);
-
-  const storage = new Storage(client);
-  const databases = new Databases(client);
+  import { appwriteService } from "$lib/services/appwrite";
+  import UploadModal from "$lib/components/UploadModal.svelte";
+  import ViewModal from "$lib/components/ViewModal.svelte";
 
   let files: Models.File[] = [];
   let isUploading = false;
   let showConfirmDialog = false;
   let selectedFile: File | null = null;
-  let username: String = "";
+  let username: string = "";
+  let showViewDialog = false;
+  let selectedVideoFile: Models.File | null = null;
+  let selectedVideoMetadata: Models.Document | null = null;
 
   onMount(async () => {
     try {
-      const result = await storage.listFiles("main");
-      files = result.files.reverse();
+      files = (await appwriteService.listFiles()).reverse();
     } catch (error) {
       console.log(error);
     }
@@ -34,30 +30,22 @@
     }
   }
 
-  function handleConfirmUpload() {
+  async function handleConfirmUpload() {
     if (!selectedFile) return;
 
     isUploading = true;
     showConfirmDialog = false;
 
-    const promise = storage.createFile("main", ID.unique(), selectedFile);
-
-    promise.then(
-      function (response) {
-        console.log(response);
-        addMetadata(response);
-        storage.listFiles("main").then((result) => {
-          files = result.files.reverse();
-          isUploading = false;
-          selectedFile = null;
-        });
-      },
-      function (error) {
-        console.log(error);
-        isUploading = false;
-        selectedFile = null;
-      },
-    );
+    try {
+      const response = await appwriteService.uploadFile(selectedFile);
+      await appwriteService.addMetadata(response.$id, username);
+      files = (await appwriteService.listFiles()).reverse();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      isUploading = false;
+      selectedFile = null;
+    }
   }
 
   function handleCancelUpload() {
@@ -67,21 +55,41 @@
     if (fileInput) fileInput.value = "";
   }
 
-  function getFileUrl(fileId: string) {
-    return `https://cloud.appwrite.io/v1/storage/buckets/main/files/${fileId}/view?project=${PROJECT_ID}`;
+  async function handleVideoClick(file: Models.File) {
+    selectedVideoFile = file;
+    showViewDialog = true;
+    try {
+      selectedVideoMetadata = await appwriteService.getMetadata(file.$id);
+    } catch (error) {
+      console.log(error);
+      selectedVideoMetadata = null;
+    }
   }
 
-  async function addMetadata(response: Models.File) {
-    const promise: Models.Document = await databases.createDocument(
-      "main",
-      "metadata",
-      response.$id,
-      {
-        creator: username.trim().length > 0 ? username.trim() : "Anonymous",
-      },
-    );
-    console.log(promise);
+  function handleCloseView() {
+    showViewDialog = false;
+    selectedVideoFile = null;
+    selectedVideoMetadata = null;
   }
+
+  function handleOverlayClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) {
+      if (showConfirmDialog) handleCancelUpload();
+      if (showViewDialog) handleCloseView();
+    }
+  }
+
+  onMount(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showConfirmDialog) handleCancelUpload();
+        if (showViewDialog) handleCloseView();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  });
 </script>
 
 <div class="container mx-auto p-4">
@@ -91,7 +99,7 @@
       id="uploader"
       accept=".mp4, .m4v"
       class="cursor-pointer block w-auto text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-      onchange={handleFileChange}
+      on:change={handleFileChange}
       disabled={isUploading}
     />
     {#if isUploading}
@@ -99,52 +107,27 @@
     {/if}
   </div>
 
-  {#if showConfirmDialog}
-    <div class="fixed inset-0 bg-[#00000080] flex items-center justify-center">
-      <div class="bg-white p-6 rounded-lg shadow-xl">
-        <h3 class="text-lg font-semibold mb-4">Confirm Upload</h3>
-        <video
-          controls
-          src={selectedFile ? URL.createObjectURL(selectedFile) : ""}
-          crossorigin="anonymous"
-          class="w-xl"
-        >
-          <track kind="captions" src="" label="English" />
-        </video>
-
-        <p class="text-gray-500 text-sm mt-2">
-          {selectedFile?.name}
-        </p>
-        <div class="flex justify-end space-x-3 mt-3">
-          <input
-            bind:value={username}
-            type="text"
-            placeholder="Username"
-            class="self-start border-b-2 border-spacing-2 mr-auto h-auto my-auto"
-          />
-          <button
-            class="px-4 py-2 text-gray-600 bg-gray-200 rounded hover:bg-gray-300 cursor-pointer"
-            onclick={handleCancelUpload}
-          >
-            Cancel
-          </button>
-          <button
-            class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 cursor-pointer"
-            onclick={handleConfirmUpload}
-          >
-            Upload
-          </button>
-        </div>
-      </div>
-    </div>
+  {#if showConfirmDialog && selectedFile}
+    <UploadModal
+      file={selectedFile}
+      bind:username
+      on:cancel={handleCancelUpload}
+      on:confirm={handleConfirmUpload}
+    />
   {/if}
 
   <div class="video-grid">
     {#each files as file}
-      <div class="border p-4 rounded shadow-md hover:shadow-lg transition">
+      <div
+        class="border p-4 rounded shadow-md hover:shadow-lg transition cursor-pointer"
+        on:click={() => handleVideoClick(file)}
+        on:keydown={(e) => e.key === "Enter" && handleVideoClick(file)}
+        role="button"
+        tabindex="0"
+      >
         <video
           controls
-          src={getFileUrl(file.$id)}
+          src={appwriteService.getFileUrl(file.$id)}
           crossorigin="anonymous"
           class="w-full h-auto"
         >
@@ -154,6 +137,15 @@
       </div>
     {/each}
   </div>
+
+  {#if showViewDialog && selectedVideoFile}
+    <ViewModal
+      file={selectedVideoFile}
+      metadata={selectedVideoMetadata}
+      getFileUrl={appwriteService.getFileUrl}
+      on:close={handleCloseView}
+    />
+  {/if}
 </div>
 
 <style>
