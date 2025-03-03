@@ -1,4 +1,4 @@
-import { Client, Storage, Databases, ID } from "appwrite";
+import { Client, Storage, Databases, ID, Query } from "appwrite";
 import type { Models } from "appwrite";
 import { PROJECT_ID } from "../constants";
 
@@ -17,7 +17,8 @@ class AppwriteService {
   }
 
   async listFiles(): Promise<Models.File[]> {
-    const result = await this.storage.listFiles("main");
+    const result = await this.storage.listFiles("main", [Query.limit(100)]);
+    console.log(result.files);
     return result.files;
   }
 
